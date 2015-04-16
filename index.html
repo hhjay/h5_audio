@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>audio</title>
+	<script src="../../jquery/jquery.min.js"></script>
+	<style type="text/css">
+	.lrc{
+		width: 80%;
+		height: 500px;
+		background: #acc;
+		overflow: auto;
+	}
+	</style>
+</head>
+<body>
+<div class="audio">
+	<audio id="v" src="k歌之王.mp3" preload="preload" controls="controls" type="vedio/mp4">sorry</audio>
+	<button class="btn">play</button>
+	<button class="go">go</button>
+	<button class="back">back</button>
+	<button class="getLrc">get</button>
+</div>
+<div class="lrc"></div>
+<br/>
+<form>
+	总时间：<input type="text" />
+	当前到：<input type="text" />
+	距结束：<input type="text" />
+</form>
+<script type="text/javascript">
+$(document).ready(function() {
+	var audio = $("audio")[0];
+	var flag = 0;
+	var form = $("form input");
+	var au_time = 0;
+	var url = 'curl.php?songName=';
+
+	$(".btn").click(function() {// 暂停 || 播放
+		au_time = audio.duration;// audio总长度
+		if (flag == 0) {// flag=0 暂停
+			audio.play();
+			$(this).text("pause");
+			flag = 1;
+			var temp = fnS2m(au_time);
+			form[0].value = temp.m+" : "+temp.s;
+
+			var num = 0;// 正常
+			var i = setInterval(function() {
+				num = audio.currentTime;
+				num++;
+				if (num <= au_time) {
+					temp = fnS2m(num);
+					form[1].value = temp.m+" : "+temp.s;
+				}else{
+					clearInterval(i);
+				}
+			},1000);
+		}else{
+			audio.pause();
+			$(this).text("play");
+			flag = 0;
+		}
+		$(".go").click(function() {
+				if (audio.currentTime>=au_time) {
+					alert("time out++");
+				}else{
+					audio.currentTime += 10; //快进
+				}
+			});
+			$(".back").click(function() {
+				if (audio.currentTime<=10) {
+					alert("time out--");
+				}else{
+					audio.currentTime -= 10; //快进
+				}
+			});
+	});
+	$(".getLrc").click(function() {
+		var songName = $("#v").attr("src");
+		songName = songName.substr(0,songName.length-4);
+		console.log(songName);
+		$.ajax({
+        	url: url+songName,
+        	type: 'GET',
+        	success: function(data) {
+            	showLrc(data);
+        	},
+	        error: function(err) {
+	            console.log("err");
+	        }
+    	});
+    });
+
+	function fnS2m(sec) {//秒速变时间
+		var time = Array();
+		if (sec<0) {
+			alert("this value is err");
+		}else{
+			time.s = Math.floor(sec%60);
+			time.m = Math.floor(sec/60);
+			return time;
+		}
+	}
+
+	function showLrc(data) {
+		var data = data.replace(/^\s+|\s+$/g,"");
+		var temp = "";
+		var arrT = new Array();
+		var arrL = new Array();
+		var newArr = data.replace(/\n/g, '\n<br/>');//匹配输出的歌词及时间
+		var reg = /\[.[^*]*?\]/g;//匹配时间正则
+
+		var time = newArr.match(reg);//已经 提取出来时间数组
+		var jsonT = JSON.stringify(time);
+		jsonT = JSON.parse(jsonT);
+
+		var test = data.replace(/\n/g,'').split("]");// 歌词匹配 将时间和歌词区分
+
+		var tag = 0;
+		for (var i = tag; i < jsonT.length; i++) {
+			var timeTemp = jsonT[i].substr(1,jsonT[i].length-2);
+			for (var j = 0; j < test.length; j++) {
+				var temp = String(test[j]),x=0;
+				for (var k = 0; k < temp.length; k++) {// 将时间从数组里面提取出来后匹配
+					if (temp[k]=="[") {
+						x = k;
+						break;
+					}
+				}
+				var testTemp = temp.substr(x+1,temp.length-1);
+				if (timeTemp==testTemp) {
+					tag = i;
+					// console.log((j+2)+"  "+test[j+1]+" "+tag);
+					break;
+				}
+			}
+		}
+
+		for (var i = 0; i < test.length; i++) {
+			console.log(i+" "+test[i]);
+		};
+
+		$(".lrc").html(data);
+	}
+})
+</script>
+</body>
+</html>
